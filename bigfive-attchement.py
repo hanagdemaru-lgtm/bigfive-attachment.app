@@ -16,8 +16,13 @@ def init_supabase() -> Client:
 supabase = init_supabase()
 
 # ファイルパス設定
-BIG5_FILE = r"C:\Python\bigfive\bigfive_shitumon.txt"
-AITYAKU_FILE = r"C:\Python\bigfive\aityaku_shitsumon.txt"
+
+# このPythonファイルが存在するディレクトリの絶対パスを取得
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 相対パスで結合する（ローカルでもクラウドでも自動で正しく認識されます）
+BIG5_FILE = os.path.join(BASE_DIR, "bigfive_shitumon.txt")
+AITYAKU_FILE = os.path.join(BASE_DIR, "aityaku_shitsumon.txt")
 
 # --- 逆転項目の指定 (1から始まる設問番号) ---
 BIG5_REVERSE = [1, 6, 7, 8, 9, 11, 20, 24, 25, 28]
