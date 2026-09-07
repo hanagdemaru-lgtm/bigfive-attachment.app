@@ -9,18 +9,16 @@ def init_supabase() -> Client:
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
         return create_client(url, key)
-    except Exception:
+    except Exception as e:
+        # 接続失敗時に理由を画面へ表示するデバッグ用
+        st.error(f"Supabase接続設定エラー: {e}")
         return None
 
 
 supabase = init_supabase()
 
-# ファイルパス設定
-
-# このPythonファイルが存在するディレクトリの絶対パスを取得
+# --- パス設定 (ローカル・クラウド自動対応) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 相対パスで結合する（ローカルでもクラウドでも自動で正しく認識されます）
 BIG5_FILE = os.path.join(BASE_DIR, "bigfive_shitumon.txt")
 AITYAKU_FILE = os.path.join(BASE_DIR, "aityaku_shitsumon.txt")
 
@@ -64,7 +62,7 @@ def calculate_scores(answers):
     """Big5および愛着スタイルの得点計算 (逆転項目処理含む)"""
     processed = {}
 
-    # 1. Big5 逆転項目処理
+    # 1. Big5 逆転項目処理 (7件法: 8 - 値)
     for i in range(1, 30):
         val = answers.get(f"b5_q{i}", 4)
         processed[f"b5_q{i}"] = (8 - val) if i in BIG5_REVERSE else val
@@ -118,6 +116,7 @@ def calculate_scores(answers):
 def save_to_supabase(raw_answers, calculated_data):
     """Supabaseに生の回答データと因子スコアを合わせて保存"""
     if supabase is None:
+        st.error("Supabaseクライアントが初期化されていないため、保存をスキップしました。")
         return False
 
     payload = {}
@@ -166,7 +165,7 @@ def main():
         if aityaku_qs:
             for i, q_text in enumerate(aityaku_qs, 1):
                 answers[f"att_q{i}"] = st.radio(
-                    label=f"Q{i}. {q_text}",
+                    label=q_text,  # テキストの「1. 私は〜」をそのまま使用
                     options=OPTIONS,
                     format_func=lambda x: OPTION_LABELS[x],
                     index=3,  # 初期値: 4（どちらともいえない）
@@ -174,9 +173,7 @@ def main():
                     key=f"att_{i}",
                 )
         else:
-            st.warning(
-                f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}"
-            )
+            st.warning(f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}")
 
         st.write("---")
         submit_btn = st.form_submit_button(
@@ -189,8 +186,6 @@ def main():
         saved = save_to_supabase(answers, calculated_data)
         if saved:
             st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
-        else:
-            st.info("回答が送信されました。（DB未接続またはローカル実行）")
 
 
 if __name__ == "__main__":
