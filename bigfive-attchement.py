@@ -19,6 +19,19 @@ supabase = init_supabase()
 BIG5_FILE = r"C:\Python\bigfive\bigfive_shitumon.txt"
 AITYAKU_FILE = r"C:\Python\bigfive\aityaku_shitsumon.txt"
 
+# --- 逆転項目の指定 (1から始まる設問番号) ---
+BIG5_REVERSE = [1, 6, 7, 8, 9, 11, 20, 24, 25, 28]
+AITYAKU_REVERSE = [4, 9, 14, 17, 18, 22, 23, 24, 26]
+
+# --- Big5 因子マッピング (29問用) ---
+BIG5_FACTORS = {
+    "factor_e": [1, 2, 3, 4, 5],             # 外向性
+    "factor_c": [6, 7, 8, 9, 10, 11, 12],    # 勤勉性
+    "factor_n": [13, 14, 15, 16, 17],        # 神経質傾向
+    "factor_o": [18, 19, 20, 21, 22, 23],    # 開放性
+    "factor_a": [24, 25, 26, 27, 28, 29],    # 調和性
+}
+
 # 7件法の定義
 OPTIONS = [1, 2, 3, 4, 5, 6, 7]
 OPTION_LABELS = {
@@ -42,13 +55,72 @@ def load_questions(file_path):
     return []
 
 
-def save_to_supabase(raw_answers):
-    """Supabaseに生の回答データのみを保存"""
+def calculate_scores(answers):
+    """Big5および愛着スタイルの得点計算 (逆転項目処理含む)"""
+    processed = {}
+
+    # 1. Big5 逆転項目処理
+    for i in range(1, 30):
+        val = answers.get(f"b5_q{i}", 4)
+        processed[f"b5_q{i}"] = (8 - val) if i in BIG5_REVERSE else val
+
+    # 2. 愛着スタイル 逆転項目処理
+    for i in range(1, 28):
+        val = answers.get(f"att_q{i}", 4)
+        processed[f"att_q{i}"] = (8 - val) if i in AITYAKU_REVERSE else val
+
+    # 3. Big5 5因子スコア算出 (平均値)
+    factor_scores = {}
+    for factor_key, q_list in BIG5_FACTORS.items():
+        vals = [processed[f"b5_q{q}"] for q in q_list if f"b5_q{q}" in processed]
+        factor_scores[factor_key] = sum(vals) / len(vals) if vals else 4.0
+
+    # 4. 愛着スタイル (見捨てられ不安・親密性回避) スコア算出
+    anxiety_qs = [1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13]
+    avoidance_qs = [
+        4, 9, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27
+    ]
+
+    anx_vals = [processed[f"att_q{q}"] for q in anxiety_qs]
+    avo_vals = [processed[f"att_q{q}"] for q in avoidance_qs]
+
+    att_anxiety = sum(anx_vals) / len(anx_vals) if anx_vals else 4.0
+    att_avoidance = sum(avo_vals) / len(avo_vals) if avo_vals else 4.0
+
+    # 5. 類型判定 (カットオフ値: 4.0)
+    if att_anxiety < 4.0 and att_avoidance < 4.0:
+        att_type = "安定型"
+    elif att_anxiety >= 4.0 and att_avoidance < 4.0:
+        att_type = "囚われ型（不安型）"
+    elif att_anxiety < 4.0 and att_avoidance >= 4.0:
+        att_type = "拒絶・回避型"
+    else:
+        att_type = "恐れ・回避型"
+
+    # 保存用データの構築
+    calculated_data = {}
+    calculated_data.update(factor_scores)
+    calculated_data.update({
+        "att_anxiety": att_anxiety,
+        "att_avoidance": att_avoidance,
+        "att_type": att_type
+    })
+
+    return calculated_data
+
+
+def save_to_supabase(raw_answers, calculated_data):
+    """Supabaseに生の回答データと因子スコアを合わせて保存"""
     if supabase is None:
         return False
 
+    payload = {}
+    payload.update(raw_answers)
+    payload.update(calculated_data)
+
     try:
-        supabase.table("results").insert(raw_answers).execute()
+        supabase.table("results").insert(payload).execute()
         return True
     except Exception as e:
         st.error(f"DB保存エラー: {e}")
@@ -106,9 +178,10 @@ def main():
             "回答を送信する", type="primary", use_container_width=True
         )
 
-    # 送信後のデータ保存とメッセージ表示
+    # 送信後の処理
     if submit_btn:
-        saved = save_to_supabase(answers)
+        calculated_data = calculate_scores(answers)
+        saved = save_to_supabase(answers, calculated_data)
         if saved:
             st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
         else:
