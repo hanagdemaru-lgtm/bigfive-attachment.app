@@ -1,0 +1,21 @@
+# --- 最重要：機密情報・APIキーの保護 ---
+.streamlit/secrets.toml
+.env
+*.env
+
+# --- Python のキャッシュファイル・一時ファイル ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --- 仮想環境 (Virtual Environments) ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- VS Code / OS の設定・一時ファイル ---
+.vscode/
+.DS_Store
+Thumbs.db
