@@ -136,9 +136,7 @@ def render_result(calc_data):
     st.title("🎉 診断結果")
     st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
 
-    st.subheader("📊 測定結果")
-
-    st.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
+    st.subheader("測定結果")
 
     st.write("**【Big5 性格因子スコア（1〜7点）】**")
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -152,6 +150,7 @@ def render_result(calc_data):
     col_a1, col_a2 = st.columns(2)
     col_a1.metric("見捨てられ不安", f"{calc_data.get('att_anxiety', 0.0):.2f}")
     col_a2.metric("親密性回避", f"{calc_data.get('att_avoidance', 0.0):.2f}")
+    t.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
 
     st.divider()
 
