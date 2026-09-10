@@ -131,61 +131,103 @@ def save_to_supabase(raw_answers, calculated_data):
         return False
 
 
+def render_result(calc_data):
+    """診断結果を表示する関数"""
+    st.title("🎉 診断結果")
+    st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
+
+    st.subheader("📊 測定結果")
+
+    st.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
+
+    st.write("**【Big5 性格因子スコア（1〜7点）】**")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("外向性", f"{calc_data.get('factor_e', 0.0):.2f}")
+    col2.metric("勤勉性", f"{calc_data.get('factor_c', 0.0):.2f}")
+    col3.metric("神経質傾向", f"{calc_data.get('factor_n', 0.0):.2f}")
+    col4.metric("開放性", f"{calc_data.get('factor_o', 0.0):.2f}")
+    col5.metric("調和性", f"{calc_data.get('factor_a', 0.0):.2f}")
+
+    st.write("**【愛着次元スコア（1〜7点）】**")
+    col_a1, col_a2 = st.columns(2)
+    col_a1.metric("見捨てられ不安", f"{calc_data.get('att_anxiety', 0.0):.2f}")
+    col_a2.metric("親密性回避", f"{calc_data.get('att_avoidance', 0.0):.2f}")
+
+    st.divider()
+
+    if st.button("もう一度回答する"):
+        st.session_state['page'] = 'survey'
+        st.rerun()
+
+
 def main():
-    st.title("パーソナリティ＆愛着スタイル アンケート")
-    st.write(
-        "以下の質問項目について、あなたに最もあてはまるボタンをそれぞれ選んで回答してください。"
-    )
+    # ページ制御用の状態初期化
+    if 'page' not in st.session_state:
+        st.session_state['page'] = 'survey'
 
-    big5_qs = load_questions(BIG5_FILE)
-    aityaku_qs = load_questions(AITYAKU_FILE)
-
-    answers = {}
-
-    with st.form("survey_form"):
-        # --- PART 1: Big5 (29問) ---
-        st.subheader("PART 1: Big5 性格特性 (全29問)")
-        if big5_qs:
-            for i, q_text in enumerate(big5_qs, 1):
-                answers[f"b5_q{i}"] = st.radio(
-                    label=f"Q{i}. {q_text}",
-                    options=OPTIONS,
-                    format_func=lambda x: OPTION_LABELS[x],
-                    index=3,  # 初期値: 4（どちらともいえない）
-                    horizontal=True,
-                    key=f"b5_{i}",
-                )
-        else:
-            st.warning(f"Big5の質問ファイルが見つかりません: {BIG5_FILE}")
-
-        st.write("---")
-
-        # --- PART 2: 愛着スタイル (27問) ---
-        st.subheader("PART 2: 対人関係・愛着スタイル (全27問)")
-        if aityaku_qs:
-            for i, q_text in enumerate(aityaku_qs, 1):
-                answers[f"att_q{i}"] = st.radio(
-                    label=q_text,  # テキストの「1. 私は〜」をそのまま使用
-                    options=OPTIONS,
-                    format_func=lambda x: OPTION_LABELS[x],
-                    index=3,  # 初期値: 4（どちらともいえない）
-                    horizontal=True,
-                    key=f"att_{i}",
-                )
-        else:
-            st.warning(f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}")
-
-        st.write("---")
-        submit_btn = st.form_submit_button(
-            "回答を送信する", type="primary", use_container_width=True
+    # --- アンケート画面 ---
+    if st.session_state['page'] == 'survey':
+        st.title("パーソナリティ＆愛着スタイル アンケート")
+        st.write(
+            "以下の質問項目について、あなたに最もあてはまるボタンをそれぞれ選んで回答してください。"
         )
 
-    # 送信後の処理
-    if submit_btn:
-        calculated_data = calculate_scores(answers)
-        saved = save_to_supabase(answers, calculated_data)
-        if saved:
-            st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
+        big5_qs = load_questions(BIG5_FILE)
+        aityaku_qs = load_questions(AITYAKU_FILE)
+
+        answers = {}
+
+        with st.form("survey_form"):
+            # --- PART 1: Big5 (29問) ---
+            st.subheader("PART 1: Big5 性格特性 (全29問)")
+            if big5_qs:
+                for i, q_text in enumerate(big5_qs, 1):
+                    answers[f"b5_q{i}"] = st.radio(
+                        label=f"Q{i}. {q_text}",
+                        options=OPTIONS,
+                        format_func=lambda x: OPTION_LABELS[x],
+                        index=3,  # 初期値: 4（どちらともいえない）
+                        horizontal=True,
+                        key=f"b5_{i}",
+                    )
+            else:
+                st.warning(f"Big5の質問ファイルが見つかりません: {BIG5_FILE}")
+
+            st.write("---")
+
+            # --- PART 2: 愛着スタイル (27問) ---
+            st.subheader("PART 2: 対人関係・愛着スタイル (全27問)")
+            if aityaku_qs:
+                for i, q_text in enumerate(aityaku_qs, 1):
+                    answers[f"att_q{i}"] = st.radio(
+                        label=q_text,  # テキストの「1. 私は〜」をそのまま使用
+                        options=OPTIONS,
+                        format_func=lambda x: OPTION_LABELS[x],
+                        index=3,  # 初期値: 4（どちらともいえない）
+                        horizontal=True,
+                        key=f"att_{i}",
+                    )
+            else:
+                st.warning(f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}")
+
+            st.write("---")
+            submit_btn = st.form_submit_button(
+                "回答を送信する", type="primary", use_container_width=True
+            )
+
+        # 送信後の処理
+        if submit_btn:
+            calculated_data = calculate_scores(answers)
+            saved = save_to_supabase(answers, calculated_data)
+            if saved:
+                st.session_state['calculated_data'] = calculated_data
+                st.session_state['page'] = 'result'
+                st.rerun()
+
+    # --- 結果表示画面 ---
+    elif st.session_state['page'] == 'result':
+        calc_data = st.session_state.get('calculated_data', {})
+        render_result(calc_data)
 
 
 if __name__ == "__main__":
