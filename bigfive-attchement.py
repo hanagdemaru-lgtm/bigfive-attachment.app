@@ -95,11 +95,11 @@ def calculate_scores(answers):
     if att_anxiety < 4.0 and att_avoidance < 4.0:
         att_type = "安定型"
     elif att_anxiety >= 4.0 and att_avoidance < 4.0:
-        att_type = "囚われ型（不安型）"
+        att_type = "囚われ型"
     elif att_anxiety < 4.0 and att_avoidance >= 4.0:
-        att_type = "拒絶・回避型"
+        att_type = "拒絶型"
     else:
-        att_type = "恐れ・回避型"
+        att_type = "恐れ型"
 
     # 保存用データの構築
     calculated_data = {}
@@ -150,7 +150,7 @@ def render_result(calc_data):
     col_a1, col_a2 = st.columns(2)
     col_a1.metric("見捨てられ不安", f"{calc_data.get('att_anxiety', 0.0):.2f}")
     col_a2.metric("親密性回避", f"{calc_data.get('att_avoidance', 0.0):.2f}")
-    t.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
+    st.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
 
     st.divider()
 
