@@ -152,7 +152,7 @@ def save_to_supabase(raw_answers, calculated_data):
 
 def render_result(calc_data):
     """診断結果を表示する関数"""
-    st.title("🎉 診断結果")
+    st.title("診断結果")
     st.success(
         "回答が正常に提出・保存されました。ご協力ありがとうございました。"
     )
@@ -248,7 +248,7 @@ def main():
     # サイドバーでページ切り替えを可能に設定
     st.sidebar.title("ナビゲーション")
     page_selection = st.sidebar.radio(
-        "メニューを選んでね",
+        "メニュー",
         ["アンケート", "解説ページ"],
         index=0 if st.session_state["page"] != "explanation" else 1,
     )
