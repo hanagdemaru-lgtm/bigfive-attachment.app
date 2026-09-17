@@ -2,6 +2,12 @@ import os
 import streamlit as st
 from supabase import Client, create_client
 
+# --- パス設定 (ローカル・クラウド自動対応) ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BIG5_FILE = os.path.join(BASE_DIR, "bigfive_shitumon.txt")
+AITYAKU_FILE = os.path.join(BASE_DIR, "aityaku_shitsumon.txt")
+
+
 # --- Supabase 接続設定 ---
 @st.cache_resource
 def init_supabase() -> Client:
@@ -17,22 +23,17 @@ def init_supabase() -> Client:
 
 supabase = init_supabase()
 
-# --- パス設定 (ローカル・クラウド自動対応) ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BIG5_FILE = os.path.join(BASE_DIR, "bigfive_shitumon.txt")
-AITYAKU_FILE = os.path.join(BASE_DIR, "aityaku_shitsumon.txt")
-
 # --- 逆転項目の指定 (1から始まる設問番号) ---
 BIG5_REVERSE = [1, 6, 7, 8, 9, 11, 20, 24, 25, 28]
 AITYAKU_REVERSE = [4, 9, 14, 17, 18, 22, 23, 24, 26]
 
 # --- Big5 因子マッピング (29問用) ---
 BIG5_FACTORS = {
-    "factor_e": [1, 2, 3, 4, 5],             # 外向性
-    "factor_c": [6, 7, 8, 9, 10, 11, 12],    # 勤勉性
-    "factor_n": [13, 14, 15, 16, 17],        # 神経質傾向
-    "factor_o": [18, 19, 20, 21, 22, 23],    # 開放性
-    "factor_a": [24, 25, 26, 27, 28, 29],    # 調和性
+    "factor_e": [1, 2, 3, 4, 5],  # 外向性
+    "factor_c": [6, 7, 8, 9, 10, 11, 12],  # 勤勉性
+    "factor_n": [13, 14, 15, 16, 17],  # 神経質傾向
+    "factor_o": [18, 19, 20, 21, 22, 23],  # 開放性
+    "factor_a": [24, 25, 26, 27, 28, 29],  # 調和性
 }
 
 # 7件法の定義
@@ -81,8 +82,22 @@ def calculate_scores(answers):
     # 4. 愛着スタイル (見捨てられ不安・親密性回避) スコア算出
     anxiety_qs = [1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13]
     avoidance_qs = [
-        4, 9, 14, 15, 16, 17, 18, 19, 20,
-        21, 22, 23, 24, 25, 26, 27
+        4,
+        9,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
     ]
 
     anx_vals = [processed[f"att_q{q}"] for q in anxiety_qs]
@@ -104,11 +119,13 @@ def calculate_scores(answers):
     # 保存用データの構築
     calculated_data = {}
     calculated_data.update(factor_scores)
-    calculated_data.update({
-        "att_anxiety": att_anxiety,
-        "att_avoidance": att_avoidance,
-        "att_type": att_type
-    })
+    calculated_data.update(
+        {
+            "att_anxiety": att_anxiety,
+            "att_avoidance": att_avoidance,
+            "att_type": att_type,
+        }
+    )
 
     return calculated_data
 
@@ -116,7 +133,9 @@ def calculate_scores(answers):
 def save_to_supabase(raw_answers, calculated_data):
     """Supabaseに生の回答データと因子スコアを合わせて保存"""
     if supabase is None:
-        st.error("Supabaseクライアントが初期化されていないため、保存をスキップしました。")
+        st.error(
+            "Supabaseクライアントが初期化されていないため、保存をスキップしました。"
+        )
         return False
 
     payload = {}
@@ -134,7 +153,9 @@ def save_to_supabase(raw_answers, calculated_data):
 def render_result(calc_data):
     """診断結果を表示する関数"""
     st.title("🎉 診断結果")
-    st.success("回答が正常に提出・保存されました。ご協力ありがとうございました。")
+    st.success(
+        "回答が正常に提出・保存されました。ご協力ありがとうございました。"
+    )
 
     st.subheader("測定結果")
 
@@ -148,24 +169,100 @@ def render_result(calc_data):
 
     st.write("**【愛着次元スコア（1〜7点）】**")
     col_a1, col_a2 = st.columns(2)
-    col_a1.metric("見捨てられ不安", f"{calc_data.get('att_anxiety', 0.0):.2f}")
-    col_a2.metric("親密性回避", f"{calc_data.get('att_avoidance', 0.0):.2f}")
-    st.info(f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**")
+    col_a1.metric(
+        "見捨てられ不安", f"{calc_data.get('att_anxiety', 0.0):.2f}"
+    )
+    col_a2.metric(
+        "親密性回避", f"{calc_data.get('att_avoidance', 0.0):.2f}"
+    )
+    st.info(
+        f"あなたの愛着スタイル： **【{calc_data.get('att_type', '判定なし')}】**"
+    )
 
     st.divider()
 
-    if st.button("もう一度回答する"):
-        st.session_state['page'] = 'survey'
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("もう一度回答する", use_container_width=True):
+            st.session_state["page"] = "survey"
+            st.rerun()
+    with col_btn2:
+        if st.button("解説ページを見る", use_container_width=True):
+            st.session_state["page"] = "explanation"
+            st.rerun()
+
+
+def render_explanation_page():
+    """解説ページを表示する関数"""
+    st.title("解説ページ")
+    st.write("このページではBig5や愛着理論に関する解説を行います")
+
+    # ファイルパスの設定
+    big5_exp_file = os.path.join(BASE_DIR, "data", "kaisetsu_bigfive.txt")
+    aityaku_exp_file = os.path.join(BASE_DIR, "data", "kaisetsu_aityaku.txt")
+    general_exp_file = os.path.join(BASE_DIR, "data", "onegai.txt")
+
+    tab1, tab2, tab3 = st.tabs(["Big5", "愛着理論", "謝辞"])
+
+    with tab1:
+        st.header("Big5とは")
+        if os.path.exists(big5_exp_file):
+            with open(big5_exp_file, "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        else:
+            st.warning(
+                f"ファイルが見つかりません: {os.path.basename(big5_exp_file)}"
+            )
+
+    with tab2:
+        st.header("愛着理論、愛着スタイルとは")
+        if os.path.exists(aityaku_exp_file):
+            with open(aityaku_exp_file, "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        else:
+            st.warning(
+                f"ファイルが見つかりません: {os.path.basename(aityaku_exp_file)}"
+            )
+
+    with tab3:
+        st.header("アンケートについて")
+        if os.path.exists(general_exp_file):
+            with open(general_exp_file, "r", encoding="utf-8") as f:
+                st.markdown(f.read())
+        else:
+            st.warning(
+                f"ファイルが見つかりません: {os.path.basename(general_exp_file)}"
+            )
+
+    st.divider()
+    if st.button("アンケート画面に戻る"):
+        st.session_state["page"] = "survey"
         st.rerun()
 
 
 def main():
     # ページ制御用の状態初期化
-    if 'page' not in st.session_state:
-        st.session_state['page'] = 'survey'
+    if "page" not in st.session_state:
+        st.session_state["page"] = "survey"
+
+    # サイドバーでページ切り替えを可能に設定
+    st.sidebar.title("ナビゲーション")
+    page_selection = st.sidebar.radio(
+        "メニューを選んでね",
+        ["アンケート", "解説ページ"],
+        index=0 if st.session_state["page"] != "explanation" else 1,
+    )
+
+    if page_selection == "アンケート" and st.session_state["page"] == "explanation":
+        st.session_state["page"] = "survey"
+    elif (
+        page_selection == "解説ページ"
+        and st.session_state["page"] != "explanation"
+    ):
+        st.session_state["page"] = "explanation"
 
     # --- アンケート画面 ---
-    if st.session_state['page'] == 'survey':
+    if st.session_state["page"] == "survey":
         st.title("パーソナリティ＆愛着スタイル アンケート")
         st.write(
             "以下の質問項目について、あなたに最もあてはまるボタンをそれぞれ選んで回答してください。"
@@ -190,7 +287,9 @@ def main():
                         key=f"b5_{i}",
                     )
             else:
-                st.warning(f"Big5の質問ファイルが見つかりません: {BIG5_FILE}")
+                st.warning(
+                    f"Big5の質問ファイルが見つかりません: {BIG5_FILE}"
+                )
 
             st.write("---")
 
@@ -199,7 +298,7 @@ def main():
             if aityaku_qs:
                 for i, q_text in enumerate(aityaku_qs, 1):
                     answers[f"att_q{i}"] = st.radio(
-                        label=q_text,  # テキストの「1. 私は〜」をそのまま使用
+                        label=q_text,
                         options=OPTIONS,
                         format_func=lambda x: OPTION_LABELS[x],
                         index=3,  # 初期値: 4（どちらともいえない）
@@ -207,7 +306,9 @@ def main():
                         key=f"att_{i}",
                     )
             else:
-                st.warning(f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}")
+                st.warning(
+                    f"愛着スタイルの質問ファイルが見つかりません: {AITYAKU_FILE}"
+                )
 
             st.write("---")
             submit_btn = st.form_submit_button(
@@ -219,14 +320,18 @@ def main():
             calculated_data = calculate_scores(answers)
             saved = save_to_supabase(answers, calculated_data)
             if saved:
-                st.session_state['calculated_data'] = calculated_data
-                st.session_state['page'] = 'result'
+                st.session_state["calculated_data"] = calculated_data
+                st.session_state["page"] = "result"
                 st.rerun()
 
     # --- 結果表示画面 ---
-    elif st.session_state['page'] == 'result':
-        calc_data = st.session_state.get('calculated_data', {})
+    elif st.session_state["page"] == "result":
+        calc_data = st.session_state.get("calculated_data", {})
         render_result(calc_data)
+
+    # --- 解説ページ画面 ---
+    elif st.session_state["page"] == "explanation":
+        render_explanation_page()
 
 
 if __name__ == "__main__":
