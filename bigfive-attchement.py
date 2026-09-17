@@ -197,10 +197,10 @@ def render_explanation_page():
     st.title("解説ページ")
     st.write("このページではBig5や愛着理論に関する解説を行います")
 
-    # ファイルパスの設定
-    big5_exp_file = os.path.join(BASE_DIR, "data", "kaisetsu_bigfive.txt")
-    aityaku_exp_file = os.path.join(BASE_DIR, "data", "kaisetsu_aityaku.txt")
-    general_exp_file = os.path.join(BASE_DIR, "data", "onegai.txt")
+    # 【修正箇所】"data" フォルダを挟まず、同じ階層を見に行くように変更
+    big5_exp_file = os.path.join(BASE_DIR, "kaisetsu_bigfive.txt")
+    aityaku_exp_file = os.path.join(BASE_DIR, "kaisetsu_aityaku.txt")
+    general_exp_file = os.path.join(BASE_DIR, "onegai.txt")
 
     tab1, tab2, tab3 = st.tabs(["Big5", "愛着理論", "謝辞"])
 
@@ -255,11 +255,13 @@ def main():
 
     if page_selection == "アンケート" and st.session_state["page"] == "explanation":
         st.session_state["page"] = "survey"
+        st.rerun()  # 画面を即座に更新するために追加
     elif (
         page_selection == "解説ページ"
         and st.session_state["page"] != "explanation"
     ):
         st.session_state["page"] = "explanation"
+        st.rerun()  # 画面を即座に更新するために追加
 
     # --- アンケート画面 ---
     if st.session_state["page"] == "survey":
